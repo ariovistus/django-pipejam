@@ -1,0 +1,44 @@
+*.pyc
+*.ropeproject
+*env/
+swag/
+*.py[cod]
+*.coverage
+
+# C extensions
+*.so
+
+# Packages
+*.egg
+*.egg-info
+build
+eggs
+parts
+bin
+var
+sdist
+develop-eggs
+.installed.cfg
+lib64
+
+# Installer logs
+pip-log.txt
+
+# Unit test / coverage reports
+.coverage
+.tox
+nosetests.xml
+
+# Translations
+*.mo
+
+# Mr Developer
+.idea
+.mr.developer.cfg
+.project
+.pydevproject
+
+tests/cigar_example/rest_framework_swagger
+db.sql
+tests/cigar_example/static
+supervisord.log
