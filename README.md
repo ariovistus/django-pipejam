@@ -8,6 +8,7 @@ Overview
 
 
 Settings:
+
     PIPEJAM_PROCESSORS = {
         'js': {
             'processor': 'pipejam.processors.PipelineScriptProcessor',
