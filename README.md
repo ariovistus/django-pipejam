@@ -1,4 +1,4 @@
-django-amn
+django-pipejam
 ==========
 
 Asset dependency resolver on top of Django Pipeline
