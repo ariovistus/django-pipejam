@@ -11,7 +11,7 @@ register = template.Library()
 
 class AssetsNode(TagHelperNode):
     def __init__(self, takes_context, args, kwargs):
-        super().__init__(takes_context, args, kwargs)
+        super(AssetsNode, self).__init__(takes_context, args, kwargs)
         self.namespace = str(args[0]).strip('"').strip("'")
         self.nodelist = None
 
