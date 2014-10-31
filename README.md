@@ -9,6 +9,10 @@ Overview
 
 Settings:
 
+    TEMPLATE_CONTEXT_PROCESSORS = (
+        'django.core.context_processors.request',
+    )
+
     PIPEJAM_PROCESSORS = {
         'js': {
             'processor': 'pipejam.processors.PipelineScriptProcessor',

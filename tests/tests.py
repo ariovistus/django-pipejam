@@ -1,5 +1,6 @@
 
 from django.test import TestCase
+from django.test.client import RequestFactory
 from django.core.exceptions import ImproperlyConfigured
 
 from django.test.utils import setup_test_template_loader, override_settings
@@ -16,13 +17,13 @@ TEMPLATES = {
     'basetag': '''{% load pipejam %}{% assets 'js' %}{% assets 'css' %}{% assets 'ng' %}''',
     'test_one': '''
     {% load pipejam %}
-    {% assets 'js' %}
-    {% assets 'css' %}
-    {% assets 'ng' %}
+    {% assets "js" %}
+    {% assets "css" %}
+    {% assets "ng" %}
 
-    {% asset_ref 'angular' %}
-    {% asset_ref 'style1' %}
-    {% asset_ref 'template1' %}
+    {% asset_ref "angular" %}
+    {% asset_ref "style1" %}
+    {% asset_ref "template1" %}
     ''',
 
     'test_two': '''
@@ -36,7 +37,35 @@ TEMPLATES = {
     {% asset_ref 'template1' %}
     ''',
 
+    'base': '''
+    {% load pipejam %}
+    {% assets "js" %}
+    {% assets "css" %}
+    {% assets "ng" %}
+    {% block bs %}
+    {% endblock %}
+    ''',
+
+    'extends': '''
+    {% extends 'base' %}
+    {% load pipejam %}
+    {% block bs %}
+    {% asset_ref "style1" %}
+    {% asset_ref "angular" %}
+    {% asset_ref "template1" %}
+    {% endblock %}
+    ''',
+
+    'extends_outofblock': '''
+    {% extends 'base' %}
+    {% load pipejam %}
+    {% asset_ref "style1" %}
+    {% asset_ref "angular" %}
+    {% asset_ref "template1" %}
+    ''',
+
 }
+
 
 setup_test_template_loader(TEMPLATES)
 
@@ -103,26 +132,45 @@ class AssetRegistryTests(TestCase):
         self.assertEqual(script.attrs['src'], "/static/ng/template1.bundle.html")
 
 
+def render_with_request(template):
+    return template.render(Context({'request': RequestFactory()}))
+
 @override_settings(**DEFAULT_SETTINGS)
 class TagTests(TestCase):
 
     def test_simple(self):
         t = get_template('basetag')
-        t.render(Context())
+        render_with_request(t)
 
     def test_one(self):
         t = get_template('test_one')
-        vark = t.render(Context())
-        print (vark)
+        vark = render_with_request(t)
         bs = BeautifulSoup(vark)
         script = [x for x in bs.find_all("script") if x.attrs['type'] == 'text/ng-template'][0]
-        print ('script: ', script)
         self.assertIn('id',script.attrs)
         self.assertIn('type',script.attrs)
         self.assertIn('src',script.attrs)
         self.assertEqual(script.attrs['id'], "/static/ng/template1.bundle.html")
         self.assertEqual(script.attrs['type'], "text/ng-template")
         self.assertEqual(script.attrs['src'], "/static/ng/template1.bundle.html")
+
+    def test_extends(self):
+        t = get_template('extends')
+        vark = render_with_request(t)
+        bs = BeautifulSoup(vark)
+        script = [x for x in bs.find_all("script") if x.attrs['type'] == 'text/ng-template'][0]
+        self.assertIn('id',script.attrs)
+        self.assertIn('type',script.attrs)
+        self.assertIn('src',script.attrs)
+        self.assertEqual(script.attrs['id'], "/static/ng/template1.bundle.html")
+        self.assertEqual(script.attrs['type'], "text/ng-template")
+        self.assertEqual(script.attrs['src'], "/static/ng/template1.bundle.html")
+
+    def test_extends_outofblock(self):
+        t = get_template('extends_outofblock')
+        vark = render_with_request(t)
+        # this no worky. why this no worky?
+        self.assertEqual(vark.strip(), '')
 
 
 SETTINGS2 = {

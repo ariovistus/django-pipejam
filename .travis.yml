@@ -9,8 +9,10 @@ env:
   - DJANGO=Django==1.5.8
   - DJANGO=Django==1.6.5
   - DJANGO=https://github.com/django/django/archive/stable/1.7.x.zip
+  - PIPELINE=django-pipeline==1.3.25
 install:
   - pip install -q $DJANGO --use-mirrors
+  - pip install -q $PIPELINE --use-mirrors
 script:
   - python runtests.py
 

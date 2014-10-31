@@ -10,17 +10,17 @@ register = template.Library()
 
 
 class AssetsNode(TagHelperNode):
-
     def __init__(self, takes_context, args, kwargs):
         super().__init__(takes_context, args, kwargs)
         self.namespace = str(args[0]).strip('"').strip("'")
         self.nodelist = None
 
     def render(self, context):
-        if 'PIPEJAM' not in context.render_context:
-            context.render_context['PIPEJAM'] = AssetRegistry()
+        r = context.get('request', None)
+        if not getattr(r, 'PIPEJAM', None):
+            r.PIPEJAM = AssetRegistry()
 
-        registry = context.render_context['PIPEJAM']
+        registry = r.PIPEJAM
         content = self.nodelist.render(context)
         extra_tags = registry.render(context, self.namespace)
         return mark_safe(''.join(extra_tags)) + content
@@ -50,6 +50,8 @@ def asset_ref(context, bundlename, **kwargs):
     namespace = kwargs.get('namespace', None)
     if namespace:
         namespace = str(args[0]).strip('"').strip("'")
-    registry = context.render_context['PIPEJAM']
+
+    r = context.get('request', None)
+    registry = r.PIPEJAM
     registry.add_asset_reference(bundlename, namespace)
     return ''
