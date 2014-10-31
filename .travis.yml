@@ -7,15 +7,20 @@ python:
 env:
   - DJANGO=Django==1.4.13
     PIPELINE=django-pipeline==1.3.25
+    TOPOSORT=toposort==1.1
   - DJANGO=Django==1.5.8
     PIPELINE=django-pipeline==1.3.25
+    TOPOSORT=toposort==1.1
   - DJANGO=Django==1.6.5
     PIPELINE=django-pipeline==1.3.25
+    TOPOSORT=toposort==1.1
   - DJANGO=Django==1.7
     PIPELINE=django-pipeline==1.3.25
+    TOPOSORT=toposort==1.1
 install:
   - pip install -q $DJANGO --use-mirrors
   - pip install -q $PIPELINE --use-mirrors
+  - pip install -q $TOPOSORT --use-mirrors
 script:
   - python runtests.py
 
