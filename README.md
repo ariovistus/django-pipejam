@@ -1,6 +1,8 @@
 django-pipejam
 ==========
 
+[![Build Status](https://travis-ci.org/ariovistus/django-pipejam.svg?branch=master)](https://travis-ci.org/ariovistus/django-pipejam)
+
 Asset dependency resolver on top of Django Pipeline
 
 Overview
