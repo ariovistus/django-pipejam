@@ -8,40 +8,36 @@ from django.template import Context, TemplateSyntaxError
 from django.template.loader import get_template
 from pipejam.processors import AssetRegistry
 from bs4 import BeautifulSoup
+import bs4.element
 
 TEMPLATES = {
     'pipeline/css.html': '<link href="{{ url }}" rel="stylesheet" type="{{ type }}"{% if media %} media="{{ media }}"{% endif %}{% if title %} title="{{ title|default:"all" }}"{% endif %}{% if charset %} charset="{{ charset }}"{% endif %} />',
     'pipeline/js.html': '<script{% if async %} async{% endif %}{% if defer %} defer{% endif %} type="{{ type }}" src="{{ url }}" charset="utf-8"></script>',
     'pipejam/script.html': get_template('pipejam/script.html'),
 
-    'basetag': '''{% load pipejam %}{% assets 'js' %}{% assets 'css' %}{% assets 'ng' %}''',
+    'basetag': '''{% load pipejam %}{% assets 'js' %}{% assets 'css' %}''',
     'test_one': '''
     {% load pipejam %}
     {% assets "js" %}
     {% assets "css" %}
-    {% assets "ng" %}
 
     {% asset_ref "angular" %}
     {% asset_ref "style1" %}
-    {% asset_ref "template1" %}
     ''',
 
     'test_two': '''
     {% load pipejam %}
     {% assets 'js' %}
     {% assets 'css' %}
-    {% assets 'ng' %}
 
     {% asset_ref 'style1' %}
     {% asset_ref 'angular' %}
-    {% asset_ref 'template1' %}
     ''',
 
     'base': '''
     {% load pipejam %}
     {% assets "js" %}
     {% assets "css" %}
-    {% assets "ng" %}
     {% block bs %}
     {% endblock %}
     ''',
@@ -52,7 +48,6 @@ TEMPLATES = {
     {% block bs %}
     {% asset_ref "style1" %}
     {% asset_ref "angular" %}
-    {% asset_ref "template1" %}
     {% endblock %}
     ''',
 
@@ -61,7 +56,6 @@ TEMPLATES = {
     {% load pipejam %}
     {% asset_ref "style1" %}
     {% asset_ref "angular" %}
-    {% asset_ref "template1" %}
     ''',
 
 }
@@ -80,11 +74,6 @@ DEFAULT_SETTINGS = {
             'processor': 'pipejam.processors.PipelineStylesheetProcessor',
             'type': 'text/css',
         },
-        'ng': {
-            'processor': 'pipejam.processors.ScriptProcessor',
-            'type': 'text/ng-template',
-            'id': lambda bundlename, path: path,
-        },
     },
     'PIPELINE_JS': {
         'angular': {
@@ -92,6 +81,7 @@ DEFAULT_SETTINGS = {
                 'js/angular.js',
             ),
             'output_filename': 'js/angular.bundle.js',
+            'deps': ['style1'],
         },
     },
     'PIPELINE_CSS': {
@@ -102,34 +92,7 @@ DEFAULT_SETTINGS = {
             'output_filename': 'css/style1.bundle.css',
         },
     },
-    'PIPELINE_NG': {
-        'template1': {
-            'source_files': (
-                'ng/template1.html',
-            ),
-            'output_filename': 'ng/template1.bundle.html',
-        },
-    },
 }
-
-
-
-@override_settings(**DEFAULT_SETTINGS)
-class AssetRegistryTests(TestCase):
-
-    def test_script_processor(self):
-        registry = AssetRegistry()
-        registry.add_asset_reference('template1', 'ng')
-
-        a = registry.render(None, 'ng')
-        self.assertEqual(len(a), 1)
-        script = BeautifulSoup(a[0]).find_all('script')[0]
-        self.assertIn('id',script.attrs)
-        self.assertIn('type',script.attrs)
-        self.assertIn('src',script.attrs)
-        self.assertEqual(script.attrs['id'], "/static/ng/template1.bundle.html")
-        self.assertEqual(script.attrs['type'], "text/ng-template")
-        self.assertEqual(script.attrs['src'], "/static/ng/template1.bundle.html")
 
 
 def render_with_request(template):
@@ -137,6 +100,12 @@ def render_with_request(template):
 
 @override_settings(**DEFAULT_SETTINGS)
 class TagTests(TestCase):
+
+    def test_it(self):
+        registry = AssetRegistry()
+        registry.add_asset_reference('angular', 'js')
+        self.assertIn('angular', registry.assets['js'])
+        self.assertIn('style1', registry.assets['css'])
 
     def test_simple(self):
         t = get_template('basetag')
@@ -146,25 +115,32 @@ class TagTests(TestCase):
         t = get_template('test_one')
         vark = render_with_request(t)
         bs = BeautifulSoup(vark)
-        script = [x for x in bs.find_all("script") if x.attrs['type'] == 'text/ng-template'][0]
-        self.assertIn('id',script.attrs)
-        self.assertIn('type',script.attrs)
-        self.assertIn('src',script.attrs)
-        self.assertEqual(script.attrs['id'], "/static/ng/template1.bundle.html")
-        self.assertEqual(script.attrs['type'], "text/ng-template")
-        self.assertEqual(script.attrs['src'], "/static/ng/template1.bundle.html")
+        a = (bs.find_all('script'))
+        self.assertEqual(len(a), 1)
+        self.assertEqual(a[0].attrs["src"], "/static/js/angular.bundle.js")
+        a = (bs.find_all('link'))
+        self.assertEqual(len(a), 1)
+        self.assertEqual(a[0].attrs["href"], "/static/css/style1.bundle.css")
+
+    def test_two(self):
+        t = get_template('test_two')
+        vark = render_with_request(t)
+        bs = BeautifulSoup(vark)
+        a = [x for x in bs.children if type(x) == bs4.element.Tag]
+        self.assertEqual(a[0].name, "script")
+        self.assertEqual(a[0].attrs["src"], "/static/js/angular.bundle.js")
+        self.assertEqual(a[1].name, "link")
+        self.assertEqual(a[1].attrs["href"], "/static/css/style1.bundle.css")
 
     def test_extends(self):
         t = get_template('extends')
         vark = render_with_request(t)
         bs = BeautifulSoup(vark)
-        script = [x for x in bs.find_all("script") if x.attrs['type'] == 'text/ng-template'][0]
-        self.assertIn('id',script.attrs)
-        self.assertIn('type',script.attrs)
-        self.assertIn('src',script.attrs)
-        self.assertEqual(script.attrs['id'], "/static/ng/template1.bundle.html")
-        self.assertEqual(script.attrs['type'], "text/ng-template")
-        self.assertEqual(script.attrs['src'], "/static/ng/template1.bundle.html")
+        a = [x for x in bs.children if type(x) == bs4.element.Tag]
+        self.assertEqual(a[0].name, "script")
+        self.assertEqual(a[0].attrs["src"], "/static/js/angular.bundle.js")
+        self.assertEqual(a[1].name, "link")
+        self.assertEqual(a[1].attrs["href"], "/static/css/style1.bundle.css")
 
     def test_extends_outofblock(self):
         t = get_template('extends_outofblock')
@@ -180,10 +156,6 @@ SETTINGS2 = {
         'js': {
             'processor': 'pipejam.processors.ScriptProcessor',
         },
-        'ng': {
-            'processor': 'pipejam.processors.ScriptProcessor',
-            'type': 'text/ng-template',
-        },
     },
     'PIPELINE_JS': {
         'angular': {
@@ -191,7 +163,6 @@ SETTINGS2 = {
                 'js/angular.js',
             ),
             'output_filename': 'js/angular.bundle.js',
-            'deps': ['template1'],
         },
         'angular-resource': {
             'source_files': (
@@ -199,14 +170,6 @@ SETTINGS2 = {
             ),
             'output_filename': 'js/angular-resource.bundle.js',
             'deps': ['angular'],
-        },
-    },
-    'PIPELINE_NG': {
-        'template1': {
-            'source_files': (
-                'ng/template1.html',
-            ),
-            'output_filename': 'ng/template1.bundle.html',
         },
     },
 }
@@ -222,7 +185,6 @@ class AssetRegistryTests2(TestCase):
         self.assertEqual(registry.assets['js']['angular-resource'], set([('angular','js')]))
         self.assertIn('angular', registry.assets['js'])
         self.assertEqual(registry.assets['js']['angular'], set())
-        self.assertIn('template1', registry.assets['ng'])
 
 
 SETTINGS3 = {
@@ -231,10 +193,6 @@ SETTINGS3 = {
     'PIPEJAM_PROCESSORS': {
         'js': {
             'processor': 'pipejam.processors.ScriptProcessor',
-        },
-        'ng': {
-            'processor': 'pipejam.processors.ScriptProcessor',
-            'type': 'text/ng-template',
         },
     },
     'PIPELINE_JS': {
@@ -252,14 +210,6 @@ SETTINGS3 = {
             'deps': ['angular'],
         },
     },
-    'PIPELINE_NG': {
-        'angular': {
-            'source_files': (
-                'ng/template1.html',
-            ),
-            'output_filename': 'ng/template1.bundle.html',
-        },
-    },
 }
 
 
@@ -273,8 +223,6 @@ class AssetRegistryTests3(TestCase):
         self.assertEqual(registry.assets['js']['angular-resource'], set([('angular','js')]))
         self.assertIn('angular', registry.assets['js'])
         self.assertEqual(registry.assets['js']['angular'], set())
-        self.assertIn('angular', registry.assets['ng'])
-        self.assertEqual(registry.assets['ng']['angular'], set())
 
 
 SETTINGS4 = {
@@ -283,10 +231,6 @@ SETTINGS4 = {
     'PIPEJAM_PROCESSORS': {
         'js': {
             'processor': 'pipejam.processors.ScriptProcessor',
-        },
-        'ng': {
-            'processor': 'pipejam.processors.ScriptProcessor',
-            'type': 'text/ng-template',
         },
     },
     'PIPELINE_JS': {
@@ -304,14 +248,6 @@ SETTINGS4 = {
             'deps': [('angular','js')],
         },
     },
-    'PIPELINE_NG': {
-        'angular': {
-            'source_files': (
-                'ng/template1.html',
-            ),
-            'output_filename': 'ng/template1.bundle.html',
-        },
-    },
 }
 
 
@@ -325,4 +261,3 @@ class AssetRegistryTests4(TestCase):
         self.assertEqual(registry.assets['js']['angular-resource'], set([('angular','js')]))
         self.assertIn('angular', registry.assets['js'])
         self.assertEqual(registry.assets['js']['angular'], set())
-        self.assertNotIn('angular', registry.assets['ng'])

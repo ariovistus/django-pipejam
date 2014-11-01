@@ -82,25 +82,6 @@ class AssetRegistry(object):
 #
 
 
-class ScriptProcessor(Processor):
-    def _expand(self, value, bundlename, config, filename):
-        if callable(value):
-            return value(bundlename, static(filename))
-        return value
-
-    def render(self, context, bundlename, config, processor_config):
-        results = []
-        filenames = [ config.get("output_filename") ]
-        for filename in filenames:
-            attrs = dict((attr, self._expand(value, bundlename, config, filename)) 
-                         for (attr,value) in processor_config.items() 
-                         if attr != 'processor')
-            ctxt = Context(attrs)
-            ctxt['url'] = static(filename)
-            results.append(render_to_string('pipejam/script.html', ctxt))
-        return results
-
-
 class PipelineScriptProcessor(Processor):
     def render(self, context, bundlename, config, processor_config):
         from pipeline.templatetags.compressed import CompressedJSNode
