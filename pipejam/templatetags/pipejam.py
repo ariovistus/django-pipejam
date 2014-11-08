@@ -8,6 +8,11 @@ from django.template.base import TagHelperNode, generic_tag_compiler
 
 register = template.Library()
 
+def get_pipejam_registry(request):
+    if not getattr(request, 'PIPEJAM', None):
+        request.PIPEJAM = AssetRegistry()
+    return request.PIPEJAM
+
 
 class AssetsNode(TagHelperNode):
     def __init__(self, takes_context, args, kwargs):
@@ -17,10 +22,7 @@ class AssetsNode(TagHelperNode):
 
     def render(self, context):
         r = context.get('request', None)
-        if not getattr(r, 'PIPEJAM', None):
-            r.PIPEJAM = AssetRegistry()
-
-        registry = r.PIPEJAM
+        registry = get_pipejam_registry(r)
         content = self.nodelist.render(context)
         extra_tags = registry.render(context, self.namespace)
         return mark_safe(''.join(extra_tags)) + content
@@ -52,6 +54,6 @@ def asset_ref(context, bundlename, **kwargs):
         namespace = str(args[0]).strip('"').strip("'")
 
     r = context.get('request', None)
-    registry = r.PIPEJAM
+    registry = get_pipejam_registry(r)
     registry.add_asset_reference(bundlename, namespace)
     return ''

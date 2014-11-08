@@ -3,7 +3,7 @@ from distutils.core import setup
 
 setup(
     name='django-pipejam',
-    version='0.0.2',
+    version='0.0.3',
     description='Dependency management on top of Django Pipeline.',
     author='Ellery Newcomer',
     author_email='ellery-newcomer@utulsa.edu',

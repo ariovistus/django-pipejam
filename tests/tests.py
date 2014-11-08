@@ -33,6 +33,14 @@ TEMPLATES = {
     {% asset_ref 'style1' %}
     {% asset_ref 'angular' %}
     ''',
+    'test_three': '''
+    {% load pipejam %}
+    {% asset_ref 'style1' %}
+    {% asset_ref 'angular' %}
+
+    {% assets 'js' %}
+    {% assets 'css' %}
+    ''',
 
     'base': '''
     {% load pipejam %}
@@ -124,6 +132,16 @@ class TagTests(TestCase):
 
     def test_two(self):
         t = get_template('test_two')
+        vark = render_with_request(t)
+        bs = BeautifulSoup(vark)
+        a = [x for x in bs.children if type(x) == bs4.element.Tag]
+        self.assertEqual(a[0].name, "script")
+        self.assertEqual(a[0].attrs["src"], "/static/js/angular.bundle.js")
+        self.assertEqual(a[1].name, "link")
+        self.assertEqual(a[1].attrs["href"], "/static/css/style1.bundle.css")
+
+    def test_three(self):
+        t = get_template('test_three')
         vark = render_with_request(t)
         bs = BeautifulSoup(vark)
         a = [x for x in bs.children if type(x) == bs4.element.Tag]
